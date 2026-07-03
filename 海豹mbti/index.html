@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+
+<title>海豹TI测试</title>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+
+<style>
+body{
+    font-family:"Microsoft YaHei";
+    background:linear-gradient(120deg,#dff6ff,#f8f6ff);
+    text-align:center;
+    padding:20px;
+    margin:0;
+}
+
+.container{
+    width:95%;
+    max-width:820px;
+    margin:auto;
+    background:white;
+    padding:20px;
+    border-radius:15px;
+    box-shadow:0 5px 20px rgba(0,0,0,0.1);
+}
+
+h1{color:#333}
+
+button{
+    padding:12px 16px;
+    margin:8px 0;
+    border:none;
+    border-radius:10px;
+    background:#4db6ff;
+    color:white;
+    cursor:pointer;
+    width:100%;
+    font-size:16px;
+    touch-action: manipulation;
+}
+
+button:disabled{
+    background:#aaa;
+    cursor:not-allowed;
+}
+
+.btn-group{
+    display:flex;
+    gap:10px;
+    margin-top:10px;
+}
+
+.btn-group button{
+    flex:1;
+    width:auto;
+}
+
+.option{
+    display:block;
+    margin:10px auto;
+    padding:14px;
+    border-radius:12px;
+    background:#f2f2f2;
+    cursor:pointer;
+    font-size:15px;
+    text-align:left;
+    transition:0.2s;
+}
+
+.option:hover{
+    background:#d6f0ff;
+}
+
+.option.selected{
+    background:#4db6ff;
+    color:white;
+}
+
+.question-title{
+    font-size:20px;
+    font-weight:bold;
+    margin:20px 0;
+}
+
+#quizPage{ display:none; }
+
+#chart{
+    width:100%;
+    height:400px;
+    margin-top:20px;
+}
+
+/* 移动端优化 */
+@media (max-width:600px){
+
+    .container{
+        width:100%;
+        padding:12px;
+        border-radius:0;
+    }
+
+    .option{
+        font-size:14px;
+    }
+
+    .btn-group{
+        flex-direction:row;
+        gap:8px;
+    }
+
+    .btn-group button{
+        font-size:14px;
+    }
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<!-- ===== 封面 ===== -->
+<div id="startPage">
+    <h1>🦭sealti测试</h1>
+    <p>快来测测你是哪种狡猾的QQ肠！
+    </p>
+    <button onclick="startTest()">开始测试（共12题）</button>
+</div>
+
+<!-- ===== 测试页 ===== -->
+<div id="quizPage">
+
+    <h2> (･∞･ﾐэ )Э</h2>
+
+    <div id="quiz"></div>
+
+    <div class="btn-group">
+        <button onclick="prevQuestion()">上一题</button>
+        <button id="nextBtn" onclick="nextQuestion()">下一题</button>
+    </div>
+
+    <div id="result">
+        <div id="textResult"></div>
+        <div id="chart"></div>
+    </div>
+
+</div>
+
+</div>
+
+<script>
+
+// ===== 题目 =====
+const questions = [
+{q:"1. 来到一片陌生的冰海觅食，你的第一反应是？",
+a:[["看看附近有没有能帮助自己的同伴","E"],["慢慢绕一圈看看环境再说","I"]]},
+
+{q:"2. 此时，海里突然传来奇怪声响，你会？", 
+a:[["相信经验，先按老办法处理","S"],["直觉告诉我可能有新情况...","N"]]},
+
+{q:"3. 和你一起行动的好朋豹不小心带错路了，你第一时间？",
+ a:[["先找出正确路线，快速解决","T"],["先安抚对方情绪，再一起想办法","F"]]},
+
+{q:"4. 海豹村发布了新任务，你会怎么应对？",
+ a:[["仔细制定好计划，按步骤执行","J"],["边走边看情况呗，随机应变","P"]]},
+
+{q:"5. 家附近突然漂来一块奇怪浮冰，你第一反应是？", 
+a:[["召集好朋豹们一起分析情况","E"],["先自己绕过来看看这是啥","I"]]},
+
+{q:"6. 冰下发现神秘的陌生通道，你的反应是？",
+ a:[["不知道这个通道安不安全啊...","S"],["里面肯定有隐藏秘密在等着我！","N"]]},
+
+{q:"7. 被人类嘲讽“无法上吊之物，冲不走的大便”，你会怎么想？",
+ a:[["分析自己的体格，发现好像还真是","T"],["为什么骂我？！","F"]]},
+
+{q:"8. 和同伴一起迁移，你更倾向？", 
+a:[["紧紧跟着群体计划路线走，以免掉队","J"],["走着走着发现有趣的东西，短暂脱队去看看","P"]]},
+
+{q:"9. 海豹存召集海豹会议中，你通常扮演怎样的角色？", 
+a:[["主动发言的气氛活跃豹","E"],["安静倾听各位发言的倾听者豹","I"]]},
+
+{q:"10. 会议当中大家对某件事意见不一，此时你更在意？", 
+a:[["事情的真实情况是否正确","T"],["大家的感受是否被照顾","F"]]},
+
+{q:"11. 忙碌了一天后享受到美味的生鱼，你更注重...",
+ a:[["这条鱼的口感","S"],["这条鱼可以有多少种吃法","N"]]},
+
+{q:"12. 就这样一年又一年过去，你现在的生活是怎样的？", 
+a:[["提前选好冰洞，按差不多的时间晒太阳和进食","J"],["今天在这里晒太阳，明天又漂到别的浮冰去了","P"]]}
+
+];
+
+// ===== 状态 =====
+let index = 0;
+let selected = null;
+
+let score = {E:0,I:0,S:0,N:0,T:0,F:0,J:0,P:0};
+
+let reportData = {
+    EI:{E:0,I:0},
+    SN:{S:0,N:0},
+    TF:{T:0,F:0},
+    JP:{J:0,P:0}
+};
+
+// ===== 开始 =====
+function startTest(){
+    document.getElementById("startPage").style.display="none";
+    document.getElementById("quizPage").style.display="block";
+    load();
+}
+
+// ===== 加载题目 =====
+function load(){
+
+    selected = null;
+    document.getElementById("nextBtn").disabled = true;
+
+    let q = questions[index];
+
+    let html = `<div>${q.q}</div>`;
+
+    q.a.forEach((item,i)=>{
+        html += `<div class="option" onclick="choose(${i},'${item[1]}')">${item[0]}</div>`;
+    });
+
+    document.getElementById("quiz").innerHTML = html;
+}
+
+// ===== 选择 =====
+function choose(i,type){
+
+    let options = document.querySelectorAll(".option");
+
+    options.forEach(o=>o.classList.remove("selected"));
+    options[i].classList.add("selected");
+
+    selected = type;
+    document.getElementById("nextBtn").disabled = false;
+}
+
+// ===== 下一题 =====
+function nextQuestion(){
+
+    if(selected === null) return;
+
+    score[selected]++;
+
+    if(["E","I"].includes(selected)) reportData.EI[selected]++;
+    if(["S","N"].includes(selected)) reportData.SN[selected]++;
+    if(["T","F"].includes(selected)) reportData.TF[selected]++;
+    if(["J","P"].includes(selected)) reportData.JP[selected]++;
+
+    if(index < questions.length - 1){
+        index++;
+        load();
+    }else{
+        showResult();
+    }
+}
+
+// ===== 上一题 =====
+function prevQuestion(){
+
+    if(index === 0) return;
+
+    index--;
+    load();
+
+    document.getElementById("textResult").innerHTML = "";
+    document.getElementById("chart").innerHTML = "";
+}
+
+// ===== 结果 =====
+function showResult(){
+
+    let type =
+        (score.E>=score.I?"E":"I")+
+        (score.S>=score.N?"S":"N")+
+        (score.T>=score.F?"T":"F")+
+        (score.J>=score.P?"J":"P");
+
+    const map = {
+        ISTJ:{
+            name:"港海豹",
+            img:"img/istj.PNG",
+            desc:"你是一个非常自律的海上公务员。每天固定时间巡逻同一片海域，对环境变化极其敏感。生活节奏高度规律，几乎不会临时改变计划。周围豹都评价你很兢兢业业，不过只有你的好朋豹知道，你私底下其实可会开玩笑了。"},
+        ESTJ:{
+            name:"灰海豹",
+            img:"img/estj.PNG",
+            desc:"你是一个天生的海滩管理者，喜欢组织群体活动与行动节奏，连休息位置都讲究排列整齐。气场强烈，自带管理感，经常无意识承担带队角色，对混乱环境会本能进行整理。"},
+        ISFJ:{name:"环斑海豹",
+            img:"img/isfj.PNG",
+            desc:"你是一个温柔的冰洞守护者，喜欢照顾同伴，尤其是弱小的幼豹。性格温和但警觉性高，总是默默保护大家。被路过的豹感谢了会忍不住开心一整天。"},
+        INFP:{name:"竖琴海豹",
+            img:"img/infp.PNG",
+            desc:"你是一个浪漫至极的海洋诗人，总是独自游荡在冰海中，观察海洋生物的生活。喜欢漂浮在浮冰上发呆，常常沉浸在自己的幻想世界里。十分在意别的豹对自己的看法。"},
+        ENTJ:{name:"象海豹",
+            img:"img/entj.PNG",
+            desc:"你是一个海滩霸主，体型巨大，存在感极强，往往直接占据最优休息区域，其他海豹自然避让。行为带有强烈主导性，像是在无声地管理整片海滩生态秩序。"},
+        ENTP:{name:"豹海豹",
+            img:"img/entp.PNG",
+            desc:"你是一个充满创意和好奇心的挑战者，极具探索欲和攻击性，好奇心强，经常追逐企鹅或尝试新猎物策略。行为不可预测，喜欢打破平静环境。"},
+        INTP:{name:"冠海豹",
+            img:"img/intp.PNG",
+            desc:"你是一个理性而独立的思考者，会突然鼓起鼻囊又陷入长时间静止，像在进行复杂逻辑计算。行为节奏忽快忽慢，经常被观察到长时间发呆，仿佛在研究世界运行规律。"},
+        INFJ:{name:"威德尔海豹",
+            img:"img/infj.PNG",
+            desc:"你是一个富有洞察力和同理心的先知，能够深刻理解他人的感受和需求。对未来的愿景清晰，致力于实现自己的理想。对环境变化极其敏锐，行动安静但判断精准。"},
+        ESFP:{name:"食蟹海豹",
+            img:"img/esfp.PNG",
+            desc:"你是一个热情开朗的吃播王，大部分时间在进食与游泳之间循环，对环境适应力极强，情绪稳定在快乐状态。存在感来自活力与食欲，是极地里的氛围担当。"},
+        ISTP:{name:"罗斯海豹",
+            img:"img/istp.PNG",
+            desc:"你是一个灵活的独行客，喜欢动手解决问题。极少被人类观察到，行动高效且极度独立，喜欢独自行动解决问题。"},
+        ISFP:{name:"贝加尔海豹",
+            img:"img/isfp.PNG",
+            desc:"你是一个安静的画家，生活在贝加尔湖，动作轻柔缓慢，喜欢独自漂浮观察水面变化。情绪表达含蓄，对环境极其敏感，像在水面进行无声绘画。"},
+        ESTP:{name:"里海海豹",
+            img:"img/estp.PNG",
+            desc:"你是一个勇敢的里海冲浪者，经常即兴发挥与尝试新的事物。行动优先于思考，喜欢挑战环境变化。哪里有浪就往哪里冲，从不犹豫"},
+        ENFP:{name:"夏威夷僧海豹",
+            img:"img/enfp.PNG",
+            desc:"你是一个充满活力和创意的海豹，喜欢在沙滩翻滚晒太阳，对环境充满好奇与热情，情绪外放且感染力强。常常带动整片海岸气氛变得轻松活跃。"},
+        INTJ:{name:"地中海僧海豹",
+            img:"img/intj.PNG",
+            desc:"你是一个古海的规划者，喜欢独立思考和规划未来。极其稀有且神秘，长期隐居海洞或偏僻海域。行动谨慎，貌似在执行一个神秘的长期战略计划，极少暴露踪迹。"},
+        ENFJ:{name:"髯海豹",
+            img:"img/enfj.PNG",
+            desc:"你是一个南极的组织者，擅长协调群体互动与行为节奏，社交能力强，海豹村的集体活动离不开你。是群体情绪的调节者与连接者。"},
+        ESFJ:{name:"斑海豹",
+            img:"img/esfj.PNG",
+            desc:"你是一个海岸的热心管家，喜欢在群体中发挥积极作用。总是关注着群体秩序，常常主动照顾同伴情绪与安全。是稳定关系与维系和谐的核心角色，存在感温和但持续。"}
+    };
+
+    document.getElementById("quiz").innerHTML = "";
+
+   document.getElementById("textResult").innerHTML = `
+    <div style="font-size:22px;margin-bottom:10px;">
+        🦭 你的海豹人格：<br>
+        <b>${type}</b> —— ${map[type].name}
+    </div>
+
+    <img src="${map[type].img}"
+         style="width:60%;max-width:180px;border-radius:15px;margin:10px auto;display:block;">
+
+    <div style="
+        margin-top:15px;
+        font-size:15px;
+        line-height:1.6;
+        color:#444;
+        padding:10px;
+        background:#f6fbff;
+        border-radius:12px;
+    ">
+        ${map[type].desc}
+    </div>
+`;
+
+    renderChart();
+
+    document.querySelectorAll("button").forEach(b=>b.style.display="none");
+}
+
+// ===== 柱状图=====
+function renderChart(){
+
+    const chart = echarts.init(document.getElementById('chart'));
+
+    const option = {
+        title:{
+            text:'🦭 海豹人格维度分析',
+            left:'center'
+        },
+
+        tooltip:{ trigger:'axis' },
+
+        legend:{
+            data:['E/S/T/J','I/N/F/P'],
+            top:25
+        },
+
+        xAxis:{
+            type:'category',
+            data:['E             I','S             N','T             F','J             P']
+        },
+
+        yAxis:{
+            type:'value',
+            name:'选择次数'
+        },
+
+        series:[
+            {
+                name:'E/S/T/J',
+                type:'bar',
+                data:[
+                    reportData.EI.E,
+                    reportData.SN.S,
+                    reportData.TF.T,
+                    reportData.JP.J
+                ]
+            },
+            {
+                name:'I/N/F/P',
+                type:'bar',
+                data:[
+                    reportData.EI.I,
+                    reportData.SN.N,
+                    reportData.TF.F,
+                    reportData.JP.P
+                ]
+            }
+        ]
+    };
+
+    chart.setOption(option);
+
+    setTimeout(()=>chart.resize(),100);
+}
+
+// ===== resize =====
+window.addEventListener("resize", function(){
+    const chart = echarts.getInstanceByDom(document.getElementById('chart'));
+    chart?.resize();
+});
+
+</script>
+
+</body>
+</html>
